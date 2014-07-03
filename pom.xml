@@ -665,16 +665,17 @@
 
     <distributionManagement>
         <repository>
-            <id>release-repository</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
+            <id>twilio.internal.repo</id>
+            <name>Twilio Internal Repository</name>
+            <url>http://maven.dev.twilio.com/Jnana/internal-repo</url>
         </repository>
         <snapshotRepository>
-            <id>snapshot-repository</id>
-            <name>Maven2 Snapshot Repository</name>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-            <uniqueVersion>false</uniqueVersion>
+            <id>twilio.internal.snapshot.repo</id>
+            <name>Twilio internal snapshot repostory</name>
+            <url>http://maven.dev.twilio.com/Jnana/internal-snapshot-repo</url>
         </snapshotRepository>
     </distributionManagement>
+
 
     <dependencies>
         <dependency>
