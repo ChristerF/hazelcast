@@ -43,7 +43,7 @@ public abstract class AbstractEntryProcessor<K, V> implements EntryProcessor<K, 
      */
     public AbstractEntryProcessor(boolean applyOnBackup){
        if(applyOnBackup){
-          entryBackupProcessor = new EntryBackupProcessorImpl();
+          entryBackupProcessor = new EntryBackupProcessorImpl(this);
        }else{
           entryBackupProcessor = null;
        }
@@ -54,10 +54,16 @@ public abstract class AbstractEntryProcessor<K, V> implements EntryProcessor<K, 
          return entryBackupProcessor;
     }
 
-    private class EntryBackupProcessorImpl implements EntryBackupProcessor<K,V>{
+    private static class EntryBackupProcessorImpl<K,V> implements EntryBackupProcessor<K,V>{
+
+        private final EntryProcessor<K, V> entryProcessor;
+
+        private EntryBackupProcessorImpl(EntryProcessor<K,V> entryProcessor) {
+            this.entryProcessor = entryProcessor;
+        }
         @Override
         public void processBackup(Map.Entry<K, V> entry) {
-            process(entry);
+            entryProcessor.process(entry);
         }
     }
 }
