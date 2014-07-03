@@ -1,0 +1,10 @@
+type: maven
+bump_version: true
+targets:
+    - cent5
+build:
+    dependencies:
+        apache-maven
+    commands:
+        - rpm -q apache-maven || sudo yum install -y apache-maven
+        - mvn clean deploy
