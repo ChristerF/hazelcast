@@ -16,6 +16,9 @@
 
 package com.hazelcast.map;
 
+import com.hazelcast.core.HazelcastInstance;
+import com.hazelcast.core.HazelcastInstanceAware;
+
 import java.util.Map;
 
 /**
@@ -54,7 +57,7 @@ public abstract class AbstractEntryProcessor<K, V> implements EntryProcessor<K, 
          return entryBackupProcessor;
     }
 
-    private static class EntryBackupProcessorImpl<K,V> implements EntryBackupProcessor<K,V>{
+    private static class EntryBackupProcessorImpl<K,V> implements EntryBackupProcessor<K,V>, HazelcastInstanceAware{
 
         private final EntryProcessor<K, V> entryProcessor;
 
@@ -64,6 +67,13 @@ public abstract class AbstractEntryProcessor<K, V> implements EntryProcessor<K, 
         @Override
         public void processBackup(Map.Entry<K, V> entry) {
             entryProcessor.process(entry);
+        }
+
+        @Override
+        public void setHazelcastInstance(final HazelcastInstance hazelcastInstance) {
+            if (entryProcessor instanceof HazelcastInstanceAware) {
+                ((HazelcastInstanceAware) entryProcessor).setHazelcastInstance(hazelcastInstance);
+            }
         }
     }
 }
