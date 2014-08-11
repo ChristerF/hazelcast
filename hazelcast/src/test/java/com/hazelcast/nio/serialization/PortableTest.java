@@ -30,7 +30,9 @@ import org.junit.runner.RunWith;
 import java.io.IOException;
 import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
@@ -143,9 +145,21 @@ public class PortableTest {
         HashMap<String,Object> map = new HashMap<String, Object>();
         map.put("one", "1");
         map.put("two", Integer.valueOf(2));
+
+        final Collection<String> collection = new LinkedList<String>();
+        collection.add("First");
+        collection.add("Second");
+        collection.add("Third");
+        NamedPortable p1 = new NamedPortable("an-actual-portable", 111);
+
+        final String[] strArray = new String[2];
+        strArray[0] = "First ArrayItem";
+        strArray[1] = "Second ArrayItem";
         NamedWithMapPortable[] nn = new NamedWithMapPortable[5];
         for (int i = 0; i < nn.length; i++) {
-            nn[i] = new NamedWithMapPortable("named-portable-with-map" + i, i, map);
+
+
+            nn[i] = new NamedWithMapPortable("named-portable-with-map" + i, i, map, collection, strArray, "Just a String", p1 );
         }
 
         NamedWithMapPortable np = nn[0];
@@ -921,14 +935,23 @@ public class PortableTest {
         String name;
         int k;
         Map<String,Object> map = new HashMap<String,Object>();
+        Collection<String> coll = new LinkedList<String>();
+        String[] stringArray = null;
+        String justAnObject;
+        NamedPortable justAnotherObject;
+
 
         private NamedWithMapPortable() {
         }
 
-        private NamedWithMapPortable(String name, int k, Map<String,Object> map) {
+        private NamedWithMapPortable(String name, int k, Map<String,Object> map, Collection<String> collection, String[] stringArrayParam, String justAnObject, NamedPortable aPortable) {
             this.name = name;
             this.k = k;
             this.map.putAll(map);
+            this.coll.addAll(collection);
+            stringArray  = Arrays.copyOf(stringArrayParam,stringArrayParam.length);
+            this.justAnObject = justAnObject;
+            this.justAnotherObject = aPortable;
         }
 
         public int getClassId() {
@@ -939,12 +962,20 @@ public class PortableTest {
             writer.writeUTF("name", name);
             writer.writeInt("myint", k);
             writer.writeMap("mymap", map);
+            writer.writeObject("anObject", justAnObject);
+            writer.writeCollection("mycoll",coll);
+            writer.writeObject("anotherObject", justAnotherObject);
+            writer.writeObjectArray("strArray", stringArray);
         }
 
         public void readPortable(PortableReader reader) throws IOException {
             k = reader.readInt("myint");
             name = reader.readUTF("name");
             reader.readMap("mymap", map);
+            justAnObject = reader.readObject("anObject");
+            reader.readCollection("mycoll",coll);
+            justAnotherObject = reader.readObject("anotherObject");
+            stringArray = reader.readObjectArray("strArray", String[].class);
         }
 
         @Override

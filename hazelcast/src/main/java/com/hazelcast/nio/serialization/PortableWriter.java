@@ -19,6 +19,7 @@ package com.hazelcast.nio.serialization;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Map;
 
 /**
@@ -68,5 +69,11 @@ public interface PortableWriter {
 
     ObjectDataOutput getRawDataOutput() throws IOException;
 
-    <K, V> void  writeMap (String fieldName, Map<K, V> map) throws IOException;
+    <T> void writeObject(String fieldName, T object) throws IOException;
+
+    <T> void writeObjectArray(String fieldName, T[] objectArray) throws IOException;
+
+    <K, V> void writeMap(String fieldName, Map<K, V> map) throws IOException;
+
+    <T> void writeCollection(String fieldName, Collection<T> collection) throws IOException;
 }

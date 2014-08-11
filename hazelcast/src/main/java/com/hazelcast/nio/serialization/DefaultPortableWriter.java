@@ -22,6 +22,7 @@ import com.hazelcast.nio.ObjectDataOutput;
 
 import javax.sound.sampled.Port;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -206,7 +207,6 @@ public class DefaultPortableWriter implements PortableWriter {
                 int i = 0;
                 for (final Map.Entry<K,V> entry: map.entrySet()) {
                     out.writeInt(offset + i * 8, out.position());
-
                     out.writeObject(entry.getKey());
                     out.writeInt(offset + 4 + i * 8, out.position());
                     out.writeObject(entry.getValue());
@@ -214,6 +214,46 @@ public class DefaultPortableWriter implements PortableWriter {
                 }
             }
         }
+
+    @Override
+    public <T> void writeCollection(final String fieldName, final Collection<T> collection) throws IOException {
+        setPosition(fieldName);
+        final int len = collection == null ? 0 : collection.size();
+        out.writeInt(len);
+        if (len > 0) {
+            final int offset = out.position();
+            out.writeZeroBytes(len * 4);
+            int i = 0;
+            for (final T val: collection) {
+                out.writeInt(offset + i * 4, out.position());
+                out.writeObject(val);
+                i++;
+            }
+        }
+    }
+
+    @Override
+    public <T> void writeObjectArray(final String fieldName, final T[] objectArray) throws IOException {
+        setPosition(fieldName);
+        final int len = objectArray == null ? 0 : objectArray.length;
+        out.writeInt(len);
+        if (len > 0) {
+            final int offset = out.position();
+            out.writeZeroBytes(len * 4);
+            int i = 0;
+            for (final T val: objectArray) {
+                out.writeInt(offset + i * 4, out.position());
+                out.writeObject(val);
+                i++;
+            }
+        }
+    }
+
+    @Override
+    public <T> void writeObject(final String fieldName, final T object) throws IOException {
+            setPosition(fieldName);
+            out.writeObject(object);
+    }
 
     void end() throws IOException {
         out.writeInt(begin, out.position()); // write final offset
