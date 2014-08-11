@@ -77,7 +77,7 @@ final class TransactionImpl implements Transaction, TransactionSupport {
         this.durability = options.getDurability();
         this.transactionType = options.getTransactionType();
         this.txOwnerUuid = txOwnerUuid == null ? nodeEngine.getLocalMember().getUuid() : txOwnerUuid;
-        this.checkThreadAccess = txOwnerUuid != null;
+        this.checkThreadAccess = txOwnerUuid == null;
     }
 
     // used by tx backups
@@ -149,7 +149,7 @@ final class TransactionImpl implements Transaction, TransactionSupport {
     }
 
     private void checkThread() {
-        if (!checkThreadAccess && threadId != null && threadId.longValue() != Thread.currentThread().getId()) {
+        if (checkThreadAccess && threadId != null && threadId.longValue() != Thread.currentThread().getId()) {
             throw new IllegalStateException("Transaction cannot span multiple threads!");
         }
     }
@@ -160,11 +160,6 @@ final class TransactionImpl implements Transaction, TransactionSupport {
         }
         if (threadFlag.get() != null) {
             throw new IllegalStateException("Nested transactions are not allowed!");
-        }
-        //init caller thread
-        if (threadId == null) {
-            threadId = Thread.currentThread().getId();
-            setThreadFlag(Boolean.TRUE);
         }
         startTime = Clock.currentTimeMillis();
         backupAddresses = transactionManagerService.pickBackupAddresses(durability);
@@ -196,11 +191,17 @@ final class TransactionImpl implements Transaction, TransactionSupport {
                 }
             }
         }
+
+        //init caller thread
+        if (threadId == null) {
+            threadId = Thread.currentThread().getId();
+            setThreadFlag(Boolean.TRUE);
+        }
         state = ACTIVE;
     }
 
     private void setThreadFlag(Boolean flag) {
-        if (!checkThreadAccess) {
+        if (checkThreadAccess) {
             threadFlag.set(flag);
         }
     }

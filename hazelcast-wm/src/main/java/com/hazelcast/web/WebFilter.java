@@ -230,6 +230,12 @@ public class WebFilter implements Filter {
         }
         HttpSession originalSession = requestWrapper.getOriginalSession(true);
         HazelcastHttpSession hazelcastSession = new HazelcastHttpSession(WebFilter.this, id, originalSession, deferredWrite);
+
+        if (existingSessionId == null) {
+            hazelcastSession.setClusterWideNew(true);
+            getClusterMap().put(id, Boolean.TRUE);
+        }
+
         mapSessions.put(hazelcastSession.getId(), hazelcastSession);
         String oldHazelcastSessionId = mapOriginalSessions.put(originalSession.getId(), hazelcastSession.getId());
         if (oldHazelcastSessionId != null) {
@@ -393,7 +399,7 @@ public class WebFilter implements Filter {
                 hazelcastSession = getSessionWithId(requestedSessionId);
                 if (hazelcastSession == null) {
                     final Boolean existing = (Boolean) getClusterMap().get(requestedSessionId);
-                    if (existing != null && existing) {
+                    if (existing != null && existing && create) {
                         // we already have the session in the cluster loading it...
                         hazelcastSession = createNewSession(RequestWrapper.this, requestedSessionId);
                     }
@@ -435,6 +441,9 @@ public class WebFilter implements Filter {
         final HttpSession originalSession;
 
         final WebFilter webFilter;
+        // only true if session is created first time in the cluster
+        private volatile boolean clusterWideNew;
+
 
         public HazelcastHttpSession(WebFilter webFilter, final String sessionId, HttpSession originalSession, boolean deferredWrite) {
             this.webFilter = webFilter;
@@ -448,7 +457,7 @@ public class WebFilter implements Filter {
             IMap<String, Object> clusterMap = getClusterMap();
             if (deferredWrite) {
                 LocalCacheEntry cacheEntry = localCache.get(name);
-                if (cacheEntry == null || cacheEntry.reload) {
+                if (cacheEntry == null || (cacheEntry.reload && !cacheEntry.dirty)) {
                     Object value = clusterMap.get(buildAttributeName(name));
                     if (value == null) {
                         cacheEntry = NULL_ENTRY;
@@ -509,7 +518,7 @@ public class WebFilter implements Filter {
         }
 
         public boolean isNew() {
-            return originalSession.isNew();
+            return originalSession.isNew() && clusterWideNew;
         }
 
         public void putValue(final String name, final Object value) {
@@ -535,7 +544,8 @@ public class WebFilter implements Filter {
                 throw new NullPointerException("name must not be null");
             }
             if (value == null) {
-                throw new IllegalArgumentException("value must not be null");
+                removeAttribute(name);
+                return;
             }
             if (deferredWrite) {
                 LocalCacheEntry entry = localCache.get(name);
@@ -612,9 +622,6 @@ public class WebFilter implements Filter {
                     }
                 }
             }
-            if (!clusterMap.containsKey(id)) {
-                clusterMap.put(id, Boolean.TRUE);
-            }
         }
 
         private Set<String> selectKeys() {
@@ -631,6 +638,10 @@ public class WebFilter implements Filter {
                 }
             }
             return keys;
+        }
+
+        public void setClusterWideNew(boolean clusterWideNew) {
+            this.clusterWideNew = clusterWideNew;
         }
     }// END of HazelSession
 
@@ -714,6 +725,7 @@ public class WebFilter implements Filter {
                     session.sessionDeferredWrite();
                 }
             }
+
         }
     }
 

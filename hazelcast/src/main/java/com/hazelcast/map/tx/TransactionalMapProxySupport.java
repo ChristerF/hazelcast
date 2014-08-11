@@ -70,7 +70,8 @@ public abstract class TransactionalMapProxySupport extends AbstractDistributedOb
         final NodeEngine nodeEngine = getNodeEngine();
         int partitionId = nodeEngine.getPartitionService().getPartitionId(key);
         try {
-            Future f = nodeEngine.getOperationService().invokeOnPartition(MapService.SERVICE_NAME, operation, partitionId);
+            Future f = nodeEngine.getOperationService().invokeOnPartition(MapService.SERVICE_NAME, operation,
+                    partitionId);
             return (Boolean) f.get();
         } catch (Throwable t) {
             throw ExceptionUtil.rethrow(t);
@@ -93,7 +94,8 @@ public abstract class TransactionalMapProxySupport extends AbstractDistributedOb
         final NodeEngine nodeEngine = getNodeEngine();
         int partitionId = nodeEngine.getPartitionService().getPartitionId(key);
         try {
-            Future f = nodeEngine.getOperationService().invokeOnPartition(MapService.SERVICE_NAME, operation, partitionId);
+            Future f = nodeEngine.getOperationService().invokeOnPartition(MapService.SERVICE_NAME, operation,
+                    partitionId);
             return f.get();
         } catch (Throwable t) {
             throw ExceptionUtil.rethrow(t);
@@ -102,8 +104,7 @@ public abstract class TransactionalMapProxySupport extends AbstractDistributedOb
 
     public Object getForUpdateInternal(Data key) {
         VersionedValue versionedValue = lockAndGet(key, tx.getTimeoutMillis());
-        TxnUnlockOperation operation = new TxnUnlockOperation(name, key, versionedValue.version);
-        tx.addTransactionLog(new MapTransactionLog(name, key, operation, versionedValue.version, tx.getOwnerUuid()));
+        addUnlockTransactionLog(key, versionedValue.version);
         return versionedValue.value;
     }
 
@@ -140,6 +141,7 @@ public abstract class TransactionalMapProxySupport extends AbstractDistributedOb
     public Data putIfAbsentInternal(Data key, Data value) {
         VersionedValue versionedValue = lockAndGet(key, tx.getTimeoutMillis());
         if (versionedValue.value != null) {
+            addUnlockTransactionLog(key, versionedValue.version);
             return versionedValue.value;
         }
 
@@ -151,6 +153,7 @@ public abstract class TransactionalMapProxySupport extends AbstractDistributedOb
     public Data replaceInternal(Data key, Data value) {
         VersionedValue versionedValue = lockAndGet(key, tx.getTimeoutMillis());
         if (versionedValue.value == null){
+            addUnlockTransactionLog(key, versionedValue.version);
             return null;
         }
         final TxnSetOperation op = new TxnSetOperation(name, key, value, versionedValue.version);
@@ -160,8 +163,10 @@ public abstract class TransactionalMapProxySupport extends AbstractDistributedOb
 
     public boolean replaceIfSameInternal(Data key, Object oldValue, Data newValue) {
         VersionedValue versionedValue = lockAndGet(key, tx.getTimeoutMillis());
-        if (!getService().compare(name, oldValue, versionedValue.value))
+        if (!getService().compare(name, oldValue, versionedValue.value)){
+            addUnlockTransactionLog(key, versionedValue.version);
             return false;
+        }
         final TxnSetOperation op = new TxnSetOperation(name, key, newValue, versionedValue.version);
         tx.addTransactionLog(new MapTransactionLog(name, key, op, versionedValue.version, tx.getOwnerUuid()));
         return true;
@@ -176,10 +181,16 @@ public abstract class TransactionalMapProxySupport extends AbstractDistributedOb
     public boolean removeIfSameInternal(Data key, Object value) {
         VersionedValue versionedValue = lockAndGet(key, tx.getTimeoutMillis());
         if (!getService().compare(name, versionedValue.value, value)) {
+            addUnlockTransactionLog(key, versionedValue.version);
             return false;
         }
         tx.addTransactionLog(new MapTransactionLog(name, key, new TxnDeleteOperation(name, key, versionedValue.version), versionedValue.version, tx.getOwnerUuid()));
         return true;
+    }
+
+    private void addUnlockTransactionLog(Data key, long version) {
+        TxnUnlockOperation operation = new TxnUnlockOperation(name, key, version);
+        tx.addTransactionLog(new MapTransactionLog(name, key, operation, version, tx.getOwnerUuid()));
     }
 
     private VersionedValue lockAndGet(Data key, long timeout) {

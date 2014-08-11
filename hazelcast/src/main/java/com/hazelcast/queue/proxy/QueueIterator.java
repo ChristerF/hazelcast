@@ -18,38 +18,38 @@ package com.hazelcast.queue.proxy;
 
 import com.hazelcast.nio.serialization.Data;
 import com.hazelcast.nio.serialization.SerializationService;
-
 import java.util.Iterator;
 
 /**
- * @author ali 12/18/12
+ * Iterator for the Queue.
+ *
+ * @param <E>
  */
 public class QueueIterator<E> implements Iterator<E> {
 
-    final Iterator<Data> iter;
-    final SerializationService serializationService;
+    private final Iterator<Data> iterator;
+    private final SerializationService serializationService;
+    private final boolean binary;
 
-    final boolean binary;
-
-    public QueueIterator(Iterator<Data> iter, SerializationService serializationService, boolean binary) {
-        this.iter = iter;
+    public QueueIterator(Iterator<Data> iterator, SerializationService serializationService, boolean binary) {
+        this.iterator = iterator;
         this.serializationService = serializationService;
         this.binary = binary;
     }
 
     public boolean hasNext() {
-        return iter.hasNext();
+        return iterator.hasNext();
     }
 
     public E next() {
-        Data data = iter.next();
+        Data item = iterator.next();
         if (binary) {
-            return (E) data;
+            return (E) item;
         }
-        return (E) serializationService.toObject(data);
+        return (E) serializationService.toObject(item);
     }
 
     public void remove() {
-        iter.remove();
+        throw new UnsupportedOperationException("remove() is not supported!");
     }
 }

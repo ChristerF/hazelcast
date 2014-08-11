@@ -264,6 +264,16 @@ public class ClientQueueTest extends HazelcastTestSupport{
         }
     }
 
+    @Test(expected = UnsupportedOperationException.class)
+    public void testQueueRemoveFromIterator() {
+        IQueue<String> queue = client.getQueue(randomString());
+        queue.add("one");
+        Iterator<String> iterator = queue.iterator();
+        iterator.next();
+        iterator.remove();
+    }
+
+
     @Test
     public void testToArray(){
         final int maxItems = 19;

@@ -35,7 +35,7 @@ import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 @Category(QuickTest.class)
-public class WebfilterTestCase extends AbstractWebfilterTestCase {
+public class JettyWebFilterTest extends AbstractWebFilterTest {
 
     @Parameters(name = "Executing: {0}")
     public static Collection<Object[]> parameters() {
@@ -47,9 +47,21 @@ public class WebfilterTestCase extends AbstractWebfilterTestCase {
                 });
     }
 
-    public WebfilterTestCase(String name, String serverXml1, String serverXml2) {
-        this.serverXml1 = serverXml1;
-        this.serverXml2 = serverXml2;
+    public JettyWebFilterTest(String name, String serverXml1, String serverXml2) {
+        super(serverXml1,serverXml2);
+    }
+
+    @Test(timeout = 60000)
+    public void testAttributeRemoval_issue_2618() throws Exception {
+        IMap<String, Object> map = hz.getMap("default");
+        CookieStore cookieStore = new BasicCookieStore();
+
+        assertEquals("true", executeRequest("write", serverPort1, cookieStore));
+        assertEquals(2, map.size());
+
+        assertEquals("value", executeRequest("read", serverPort2, cookieStore));
+        assertEquals("true", executeRequest("remove_set_null", serverPort2, cookieStore));
+        assertEquals("null", executeRequest("read", serverPort1, cookieStore));
     }
 
     @Test(timeout = 60000)
@@ -187,4 +199,45 @@ public class WebfilterTestCase extends AbstractWebfilterTestCase {
         assertNotEquals(oldSessionId, newSessionId);
     }
 
+    @Test
+    public void testUpdateAndReadSameRequest() throws Exception{
+        IMap<String, Object> map = hz.getMap("default");
+
+        CookieStore cookieStore = new BasicCookieStore();
+        executeRequest("write", serverPort1, cookieStore);
+
+        String value = executeRequest("update-and-read-same-request", serverPort2, cookieStore);
+        assertEquals("value-updated", value);
+    }
+
+    @Test
+    public void testUpdateAndReadSameRequestWithRestart() throws Exception{
+        IMap<String, Object> map = hz.getMap("default");
+
+        CookieStore cookieStore = new BasicCookieStore();
+        executeRequest("write", serverPort1, cookieStore);
+        server1.stop();
+        server1.start();
+
+        String value = executeRequest("update-and-read-same-request", serverPort1, cookieStore);
+        assertEquals("value-updated", value);
+    }
+
+    @Test
+    public void testIssue3132() throws Exception {
+        CookieStore cookieStore = new BasicCookieStore();
+        assertEquals("true", executeRequest("isNew", serverPort1, cookieStore));
+        assertEquals("false", executeRequest("isNew", serverPort1, cookieStore));
+        assertEquals("false", executeRequest("isNew", serverPort2, cookieStore));
+        server1.stop();
+        server1.start();
+
+        assertEquals("false", executeRequest("isNew", serverPort1, cookieStore));
+        assertEquals("false", executeRequest("isNew", serverPort2, cookieStore));
+    }
+
+    @Override
+    protected ServletContainer getServletContainer(int port, String sourceDir, String serverXml) throws Exception{
+        return new JettyServer(port,sourceDir,serverXml);
+    }
 }

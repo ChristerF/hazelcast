@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Future;
@@ -217,10 +218,14 @@ public class ProxyServiceImpl
     public Operation getPostJoinOperation() {
         Collection<ProxyInfo> proxies = new LinkedList<ProxyInfo>();
         for (ProxyRegistry registry : registries.values()) {
-            for (DistributedObjectFuture future : registry.proxies.values()) {
-                DistributedObject distributedObject = future.get();
+            for (Map.Entry<String, DistributedObjectFuture> entry : registry.proxies.entrySet()) {
+                final DistributedObjectFuture future = entry.getValue();
+                if (!future.isSet()) {
+                    continue;
+                }
+                final DistributedObject distributedObject = future.get();
                 if (distributedObject instanceof InitializingObject) {
-                    proxies.add(new ProxyInfo(registry.serviceName, distributedObject.getName()));
+                    proxies.add(new ProxyInfo(registry.serviceName, entry.getKey()));
                 }
             }
         }
@@ -291,7 +296,7 @@ public class ProxyServiceImpl
                             logger.warning("Error while initializing proxy: " + proxy, e);
                         }
                     }
-                    nodeEngine.eventService.executeEvent(new ProxyEventProcessor(CREATED, serviceName, proxy));
+                    nodeEngine.eventService.executeEventCallback(new ProxyEventProcessor(CREATED, serviceName, proxy));
                     if (publishEvent) {
                         publish(new DistributedObjectEventPacket(CREATED, serviceName, name));
                     }
@@ -306,7 +311,7 @@ public class ProxyServiceImpl
             final DistributedObjectFuture proxyFuture = proxies.remove(name);
             if (proxyFuture != null) {
                 DistributedObject proxy = proxyFuture.get();
-                nodeEngine.eventService.executeEvent(new ProxyEventProcessor(DESTROYED, serviceName, proxy));
+                nodeEngine.eventService.executeEventCallback(new ProxyEventProcessor(DESTROYED, serviceName, proxy));
                 if (publishEvent) {
                     publish(new DistributedObjectEventPacket(DESTROYED, serviceName, name));
                 }
@@ -341,6 +346,10 @@ public class ProxyServiceImpl
     private class DistributedObjectFuture {
 
         volatile DistributedObject proxy;
+
+        boolean isSet() {
+            return proxy != null;
+        }
 
         DistributedObject get() {
             if (proxy == null) {
@@ -397,7 +406,7 @@ public class ProxyServiceImpl
         }
 
         public int getKey() {
-            return object.getId().hashCode();
+            return object.getName().hashCode();
         }
     }
 
