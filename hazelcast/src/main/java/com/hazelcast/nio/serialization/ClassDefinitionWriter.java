@@ -19,6 +19,7 @@ package com.hazelcast.nio.serialization;
 import com.hazelcast.nio.ObjectDataOutput;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
 * @author mdogan 7/29/13
@@ -150,6 +151,11 @@ final class ClassDefinitionWriter implements PortableWriter {
 
     public ObjectDataOutput getRawDataOutput() {
         return new EmptyObjectDataOutput();
+    }
+
+    @Override
+    public <K, V> void writeMap(final String fieldName, final Map<K, V> map) {
+        builder.addMapField(fieldName);
     }
 
     private ClassDefinition createNestedClassDef(Portable portable, ClassDefinitionBuilder nestedBuilder) throws IOException {

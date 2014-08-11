@@ -19,6 +19,7 @@ package com.hazelcast.nio.serialization;
 import com.hazelcast.nio.ObjectDataInput;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -73,4 +74,7 @@ public interface PortableReader {
     Portable[] readPortableArray(String fieldName) throws IOException;
 
     ObjectDataInput getRawDataInput() throws IOException;
+
+    <K, V> void readMap(String fieldName, Map<K, V> map) throws IOException;
+
 }

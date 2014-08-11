@@ -21,6 +21,7 @@ import com.hazelcast.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataInput;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -283,6 +284,43 @@ public class DefaultPortableReader implements PortableReader {
         raw = true;
         return in;
     }
+
+    @Override
+    public <K, V> void readMap(final String fieldName, final Map<K, V> map) throws IOException {
+        FieldDefinition fd = cd.get(fieldName);
+        if (fd == null) {
+            throw throwUnknownFieldException(fieldName);
+        }
+        final int currentPos = in.position();
+        try {
+            int pos = getPosition(fd);
+            in.position(pos);
+            final int len = in.readInt();
+            if (len > 0) {
+                final int offset = in.position();
+                final PortableContextAwareInputStream ctxIn = (PortableContextAwareInputStream) in;
+                try {
+                    for (int i = 0; i < len; i++) {
+                        final int startKey = in.readInt(offset + i * 8);
+                        in.position(startKey);
+                        final K key = in.readObject();
+                        final int startValue = in.readInt(offset + 4 + i * 8);
+                        in.position(startValue);
+                        final V value = in.readObject();
+                        map.put(key, value);
+                    }
+                } finally {
+                    ctxIn.setFactoryId(cd.getFactoryId());
+                    ctxIn.setClassId(cd.getClassId());
+                }
+            }
+        } finally {
+            in.position(currentPos);
+        }
+
+    }
+
+
 
     void end() throws IOException {
         in.position(finalPosition);

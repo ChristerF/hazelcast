@@ -20,8 +20,10 @@ import com.hazelcast.nio.BufferObjectDataOutput;
 import com.hazelcast.nio.IOUtil;
 import com.hazelcast.nio.ObjectDataOutput;
 
+import javax.sound.sampled.Port;
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -192,6 +194,26 @@ public class DefaultPortableWriter implements PortableWriter {
         raw = true;
         return out;
     }
+
+    @Override
+    public <K, V> void writeMap(final String fieldName, final Map<K,V> map) throws IOException {
+            setPosition(fieldName);
+            final int len = map == null ? 0 : map.size();
+            out.writeInt(len);
+            if (len > 0) {
+                final int offset = out.position();
+                out.writeZeroBytes(len * 4 * 2); //Keys and values
+                int i = 0;
+                for (final Map.Entry<K,V> entry: map.entrySet()) {
+                    out.writeInt(offset + i * 8, out.position());
+
+                    out.writeObject(entry.getKey());
+                    out.writeInt(offset + 4 + i * 8, out.position());
+                    out.writeObject(entry.getValue());
+                    i++;
+                }
+            }
+        }
 
     void end() throws IOException {
         out.writeInt(begin, out.position()); // write final offset

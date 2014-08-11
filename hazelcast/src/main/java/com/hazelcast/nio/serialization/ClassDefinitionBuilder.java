@@ -151,6 +151,11 @@ public final class ClassDefinitionBuilder {
         nestedClassDefinitions.add(def);
         return this;
     }
+    public ClassDefinitionBuilder addMapField(String fieldName) {
+        check();
+        fieldDefinitions.add(new FieldDefinitionImpl(index++, fieldName, FieldType.PORTABLE));
+        return this;
+    }
 
     public ClassDefinition build() {
         done = true;
