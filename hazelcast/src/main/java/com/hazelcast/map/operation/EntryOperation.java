@@ -19,7 +19,6 @@ package com.hazelcast.map.operation;
 import com.hazelcast.config.InMemoryFormat;
 import com.hazelcast.core.EntryEventType;
 import com.hazelcast.core.ManagedContext;
-import com.hazelcast.logging.ILogger;
 import com.hazelcast.map.EntryBackupProcessor;
 import com.hazelcast.map.EntryProcessor;
 import com.hazelcast.map.MapEntrySimple;
@@ -50,8 +49,6 @@ public class EntryOperation extends LockAwareOperation implements BackupAwareOpe
     protected Object oldValue;
 
 
-
-
     public EntryOperation(String name, Data dataKey, EntryProcessor entryProcessor) {
         super(name, dataKey);
         this.entryProcessor = entryProcessor;
@@ -68,9 +65,6 @@ public class EntryOperation extends LockAwareOperation implements BackupAwareOpe
     public void run() {
         final long start = System.currentTimeMillis();
         oldValue = recordStore.getMapEntry(dataKey).getValue();
-        final ILogger logger = getLogger();
-        logger.info( "DataKey for EP invocation: " + dataKey.toString());
-
         final LocalMapStatsImpl mapStats = mapService.getLocalMapStatsImpl(name);
         final Object valueBeforeProcess = mapService.toObject(oldValue);
         final MapEntrySimple entry = new MapEntrySimple(mapService.toObject(dataKey), valueBeforeProcess);
